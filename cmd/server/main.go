@@ -34,9 +34,10 @@ func main () {
 	}();
 
 	// Set up a graceful shutdown
+	// Channel to get Signal from OS (like pressing CTRL + C)
 	quit := make(chan os.Signal, 1);
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM);
-	<-quit
+	<-quit	// Waits here till it receives any signal from the quit channel
 
 	log.Println("Shutting down the server ...");
 	// Potential cleanup logic
