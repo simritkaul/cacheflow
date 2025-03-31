@@ -6,30 +6,33 @@ import (
 	"time"
 
 	"github.com/simritkaul/cacheflow/internal/cache"
+	"github.com/simritkaul/cacheflow/internal/cluster"
 )
 
 type Server struct {
 	cache *cache.Cache
-	addr string
+	mux *http.ServeMux
+	nodeManager *cluster.NodeManager
 }
 
 // Creates a new HTTP server for the cache
-func NewServer (cache *cache.Cache, addr string) (*Server) {
+func NewServer (cache *cache.Cache, mux *http.ServeMux) (*Server) {
 	return &Server{
 		cache: cache,
-		addr: addr,
+		mux: mux,
 	}
 }
 
-// Starts the HTTP server
-func (s *Server) Start () error {
-	mux := http.NewServeMux();
+// Sets the Node Manager for the server
+func (s *Server) SetNodeManager (nm *cluster.NodeManager) {
+	s.nodeManager = nm;
+}
 
-	mux.HandleFunc("/get", s.handleGet);
-	mux.HandleFunc("/set", s.handleSet);
-	mux.HandleFunc("/delete", s.handleDelete);
-
-	return http.ListenAndServe(s.addr, mux);
+// SetupHandlers sets up the HTTP handlers
+func (s *Server) SetupHandlers() {
+	s.mux.HandleFunc("/get", s.handleGet)
+	s.mux.HandleFunc("/set", s.handleSet)
+	s.mux.HandleFunc("/delete", s.handleDelete)
 }
 
 // Handle GET requests to retrieve values from cache
