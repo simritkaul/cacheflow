@@ -1,8 +1,10 @@
 package api
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"time"
 
@@ -141,6 +143,61 @@ func (s *Server) handleDelete (w http.ResponseWriter, r *http.Request) {
 
 // Forwards a request to another node
 func (s *Server) forwardRequest (w http.ResponseWriter, r *http.Request, node *cluster.Node) {
-	// Implement actual request forwarding
+	
+	// Create a new URL for forwarding
+	forwardUrl := fmt.Sprintf("%s%s", node.Address, r.URL.Path);
+
+	var req *http.Request;
+	var err error;
+
+	// Create a new request based on the original method
+	switch r.Method {
+	case http.MethodGet, http.MethodDelete:
+		// For GET and DELETE, forward the query params
+		forwardUrl = fmt.Sprintf("%s?%s", forwardUrl, r.URL.RawQuery);
+		req, err = http.NewRequest(r.Method, forwardUrl, nil);
+	case http.MethodPost:
+		// For POST, forward the request body
+		bodyBytes, err := io.ReadAll(r.Body);
+		if err != nil {
+			http.Error(w, "Error reading request body", http.StatusInternalServerError);
+			return;
+		}
+
+		req, err = http.NewRequest(r.Method, forwardUrl, bytes.NewBuffer(bodyBytes));
+		req.Header.Set("Content-Type", "application/json");
+	default:
+		http.Error(w, "Method not supported for forwarding", http.StatusMethodNotAllowed);
+		return;
+	}
+
+	if err != nil {
+		http.Error(w, "Error creating the forwarded request", http.StatusInternalServerError);
+		return;
+	}
+
+	// Forward the request
+	client := &http.Client{}
+	resp, err := client.Do(req);
+
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Error forwarding the request: %v", err), http.StatusInternalServerError);
+		return;
+	}
+	defer resp.Body.Close();
+
+	// Copy the response headers
+	for key, values := range resp.Header {
+		for _, value := range values {
+			w.Header().Add(key, value);
+		}
+	}
+
+	// Copy the status code
+	w.WriteHeader(resp.StatusCode);
+
+	// Copy the response body
+	io.Copy(w, resp.Body);
+
 	http.Error(w, fmt.Sprintf("Key belongs to node %s at %s", node.ID, node.Address), http.StatusTemporaryRedirect);
 }
