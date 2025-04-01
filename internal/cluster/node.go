@@ -231,3 +231,8 @@ func (nm *NodeManager) handleListNodes (w http.ResponseWriter, r *http.Request) 
 	w.Header().Set("Content-Type", "application/json");
 	json.NewEncoder(w).Encode(response);
 }
+
+// Gets the local node for the node manager
+func (nm *NodeManager) GetLocalNode () *Node {
+	return nm.localNode;
+}

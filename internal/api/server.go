@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -48,6 +49,16 @@ func (s *Server) handleGet (w http.ResponseWriter, r *http.Request) {
 		return;
 	}
 
+	// Check if we have a node manager and the key belongs to some other node
+	if s.nodeManager != nil  {
+		node := s.nodeManager.GetNodeForKey(key);
+		// If it was for another node, forward the request to that node
+		if node != nil && node.ID != s.nodeManager.GetLocalNode().ID {
+			s.forwardRequest(w, r, node);
+			return;
+		}
+	}
+
 	value, found := s.cache.Get(key);
 
 	if !found {
@@ -86,6 +97,16 @@ func (s *Server) handleSet (w http.ResponseWriter, r *http.Request) {
 		return;
 	}
 
+	// Check if we have a node manager and the key belongs to some other node
+	if s.nodeManager != nil  {
+		node := s.nodeManager.GetNodeForKey(data.Key);
+		// If it was for another node, forward the request to that node
+		if node != nil && node.ID != s.nodeManager.GetLocalNode().ID {
+			s.forwardRequest(w, r, node);
+			return;
+		}
+	}
+
 	ttl := time.Duration(data.TTL) * time.Second;
 
 	s.cache.Set(data.Key, data.Value, ttl);
@@ -116,4 +137,10 @@ func (s *Server) handleDelete (w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]string {
 		"status": "success",
 	})
+}
+
+// Forwards a request to another node
+func (s *Server) forwardRequest (w http.ResponseWriter, r *http.Request, node *cluster.Node) {
+	// Implement actual request forwarding
+	http.Error(w, fmt.Sprintf("Key belongs to node %s at %s", node.ID, node.Address), http.StatusTemporaryRedirect);
 }
