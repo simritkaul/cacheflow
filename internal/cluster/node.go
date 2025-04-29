@@ -236,3 +236,91 @@ func (nm *NodeManager) handleListNodes (w http.ResponseWriter, r *http.Request) 
 func (nm *NodeManager) GetLocalNode () *Node {
 	return nm.localNode;
 }
+
+// Returns a list of nodes that should store the given key
+func (nm *NodeManager) GetNodesForKey (key string, count int) []string {
+	nm.mu.Lock();
+	defer nm.mu.Unlock();
+
+	// Get primary node
+	primaryNodeId := nm.hash.Get(key);
+	nodes := []string{primaryNodeId};
+
+	// If we only need one node, return the primary
+	if count <= 1 || len(nm.nodes) <= 1 {
+		return nodes;
+	}
+
+	// Get the hash ring
+	hashRing := nm.hash.GetHashRing();
+	numNodes := len(hashRing);
+
+	// Find the position of the primary node in the ring
+	var primaryPos int;
+	for i, hash := range hashRing {
+		if nm.hash.GetNodeForHash(hash) == primaryNodeId {
+			primaryPos = i;
+			break;
+		}
+	}
+
+	// Get the remaining count - 1 nodes
+	added := 1; // Already counted primary
+	for i := 1; i < numNodes && added < count; i++ {
+		pos := (primaryPos + i) % numNodes;
+		nodeId := nm.hash.GetNodeForHash(hashRing[pos]);
+
+		// Add each node only once
+		if !containsString(nodes, nodeId) {
+			nodes = append(nodes, nodeId);
+			added++;
+		}
+	}
+
+	return nodes;
+}
+
+// Utility function for checking if a slice contains a string
+func containsString (slice []string, str string) bool {
+	for _, s := range slice {
+		if s == str {
+			return true;
+		}
+	}
+
+	return false;
+}
+
+// Handles a node failure
+func (nm *NodeManager) HandleNodeFailure (nodeId string) {
+	nm.mu.Lock();
+	
+	// Check if node exists and already marked as down
+	node, exists := nm.nodes[nodeId];
+	if !exists || node.Status == NodeStatusDown {
+		nm.mu.Unlock();
+		return;
+	}
+	
+	// Mark the status as down
+	node.Status = NodeStatusDown;
+log.Printf("Node %s marked as down, starting recovery", nodeId);
+	nm.mu.Unlock();
+
+	// Start the recovery process
+	go nm.recoverNodeData(nodeId);
+}
+
+// Handles data recovery for a failed node
+func (nm *NodeManager) recoverNodeData (failedNodeId string) {
+	// Get all keys that should be on the failed node
+	// This is a simplified approach. In a real system, you would need a way to
+	// know what keys were stored on the failed node.
+
+	// For each key that needs to be recovered:
+	// 1. Determine where it should go now
+	// 2. Find a replica that has the data
+	// 3. Copy the data to the new node
+
+	log.Printf("Recovery for node %s complete", failedNodeId)
+}

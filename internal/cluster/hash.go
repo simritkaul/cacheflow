@@ -120,3 +120,26 @@ func (ch* ConsistentHash) hashKey (key string) (uint32) {
 	hash := hasher.Sum(nil);
 	return binary.LittleEndian.Uint32(hash[:4]);
 }
+
+// Returns the hash ring
+func (ch *ConsistentHash) GetHashRing() []uint32 {
+	return ch.hashRing;
+}
+
+// Returns the node for the given hash
+func (ch *ConsistentHash) GetNodeForHash (hash uint32) string {
+	ch.mu.RLock();
+	defer ch.mu.RUnlock();
+
+	// Binary search
+	idx := sort.Search(len(ch.hashRing), func (i int) bool {
+		return ch.hashRing[i] >= hash
+	})
+
+	// Wrap around to the first node (since it is a ring)
+	if idx == len(ch.hashRing) {
+		idx = 0;
+	}
+
+	return ch.nodeMap[ch.hashRing[idx]];
+}
