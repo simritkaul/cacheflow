@@ -1,10 +1,7 @@
 # CacheFlow: Distributed Caching System
 
-![CacheFlow Logo](https://via.placeholder.com/150x150.png?text=CacheFlow)
-
 [![Go Report Card](https://goreportcard.com/badge/github.com/simritkaul/cacheflow)](https://goreportcard.com/report/github.com/simritkaul/cacheflow)
 [![GoDoc](https://godoc.org/github.com/simritkaul/cacheflow?status.svg)](https://godoc.org/github.com/simritkaul/cacheflow)
-[![License](https://img.shields.io/github/license/simritkaul/cacheflow.svg)](https://github.com/simritkaul/cacheflow/blob/main/LICENSE)
 
 CacheFlow is a high-performance, distributed in-memory caching system written in Go. It provides a reliable and scalable solution for distributed caching with support for clustering, replication, and persistence.
 
@@ -188,10 +185,6 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 3. Commit your changes (`git commit -m 'Add some amazing feature'`)
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
-
-## License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ## Acknowledgments
 
