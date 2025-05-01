@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"syscall"
 	"time"
 
@@ -25,11 +26,21 @@ func main () {
 	maxItems := flag.Int("max-items", 1000, "Maximum capacity of items in cache");
 	nodeId := flag.String("node-id", "", "Node ID (Generated if empty)");
 	seedNode := flag.String("seed", "", "Seed node address to join the cluster");
+	dataDir := flag.String("data-dir", "./data", "Directory for cache persistence");
+	replicaCount := flag.Int("replicas", 2, "Number of replicas for each key");
+	persistenceEnabled := flag.Bool("persistence", true, "Enable persistence");
 	flag.Parse();
 
 	// Generate a new node id if not provided
 	if *nodeId == "" {
 		*nodeId = uuid.New().String();
+	}
+
+	// Create a data directory if it doesn't exist
+	if *persistenceEnabled {
+		if err := os.MkdirAll(*dataDir, 0755); err != nil {
+			log.Fatalf("Failed to create data directory: %v", err);
+		}
 	}
 
 	// Create a new cache
@@ -51,6 +62,19 @@ func main () {
 
 	// Set up node management handlers
 	nm.SetupHTTPHandlers(mux);
+
+	// Create replication manager
+	rm := cache.NewReplicationManager(c, *replicaCount, nm, *nodeId);
+	rm.SetupHTTPHandlers(mux);
+	server.SetReplicationManager(rm);
+
+	// Create persistence manager if enabled
+	var persistenceManager *cache.PersistenceManager;
+	if *persistenceEnabled {
+		persistencePath := filepath.Join(*dataDir, fmt.Sprintf("cache-%s.dat", *nodeId));
+		persistenceManager = cache.NewPersistenceManager(c, persistencePath, 30 * time.Second);
+		persistenceManager.Start();
+	}
 
 	// Start health check
 	nm.StartHealthCheck();

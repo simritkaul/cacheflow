@@ -16,6 +16,7 @@ type Server struct {
 	cache *cache.Cache
 	mux *http.ServeMux
 	nodeManager *cluster.NodeManager
+	replicationManager *cache.ReplicationManager
 }
 
 // Creates a new HTTP server for the cache
@@ -29,6 +30,11 @@ func NewServer (cache *cache.Cache, mux *http.ServeMux) (*Server) {
 // Sets the Node Manager for the server
 func (s *Server) SetNodeManager (nm *cluster.NodeManager) {
 	s.nodeManager = nm;
+}
+
+// Sets the Replication Manager for the server
+func (s *Server) SetReplicationManager (rm *cache.ReplicationManager) {
+	s.replicationManager = rm;
 }
 
 // SetupHandlers sets up the HTTP handlers
